@@ -15,8 +15,9 @@ pip install -r /path/to/requirements.txt
 replace the with the actual path
 
 Example if in the same directory
+```
 pip install -r requirements.txt
-
+```
 run the bot 
 python bot.py
 
