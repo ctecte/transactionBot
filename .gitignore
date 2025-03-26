@@ -1,0 +1,3 @@
+# Ignore all .dll and .exe files
+*.xlsx
+*.env
