@@ -1,5 +1,5 @@
-To use
-Create a new variable.env file with the following line
+# To use
+### Create a new variable.env file with the following line
 ```
 bot_token = "<your actual bot token>"
 ```
@@ -8,7 +8,7 @@ Example
 bot_token = "abc-dakjdfskladsfjlakdfjafqweqwen123" 
 ```
 
-Install the dependencies (if using venv, install these inside the venv)
+### Install the dependencies (if using venv, install these inside the venv)
 ```
 pip install -r /path/to/requirements.txt
 ```
@@ -18,14 +18,14 @@ Example if in the same directory
 ```
 pip install -r requirements.txt
 ```
-run the bot 
+### run the bot 
 python bot.py
 
-For practical use, run it on a raspberry pi or orange pi
+### For practical use, run it on a raspberry pi or orange pi
 ```
 sudo nano /etc/systemd/system/mytelegrambot.service
 ```
-assuming you have a venv called myenv, use the following systemd service file
+### assuming you have a venv called myenv, use the following systemd service file
 
 ```
 [Unit]
