@@ -33,7 +33,7 @@ Description=My Telegram Bot Service
 After=network.target
 
 [Service]
-# Pass in the path to the venv bin/python, not to bin/activate. Whitespace and pass in path to bot.py
+# Directly call the python in your venv, passing your bot script
 ExecStart=/root/myenv/bin/python /root/transactionBot/bot.py
 
 # (Optional) Have systemd auto-restart on failure
@@ -41,7 +41,10 @@ ExecStart=/root/myenv/bin/python /root/transactionBot/bot.py
 Restart=always
 RestartSec=5
 
-# Run as root (if root not availble, run command 'whoami' to get user name)
+# Optional: Clean up lingering processes, prevent zombie/lingering instances of bot
+ExecStop=/bin/kill -s TERM $MAINPID
+
+# Run as root (or any other user. Use whoami to get username. Change working directory accordingly)
 User=root
 WorkingDirectory=/root/transactionBot
 
