@@ -1,7 +1,7 @@
 # To use
 ### Create a new variable.env file with the following line
 ```
-bot_token = "<your actual bot token>"
+bot_token = <your actual bot token>
 ```
 Example
 ```
