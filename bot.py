@@ -34,7 +34,7 @@ def signal_handler(sig, frame):
     print("Graceful shutdown")
     bot.stop_polling()  # Stop bot
     sys.exit(0)
-
+ 
 # Handle SIGINT (CTRL+C)
 signal.signal(signal.SIGINT, signal_handler)
 
