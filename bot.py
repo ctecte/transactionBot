@@ -21,6 +21,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import numbers
 from dotenv import load_dotenv
 import os
+import calendar
 
 
 load_dotenv("variables.env") # Replace with own bots token from botfather
@@ -40,6 +41,70 @@ signal.signal(signal.SIGINT, signal_handler)
 
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December']
+
+def get_summary(df, year, month):
+    message = ""
+    cols = ['Date', 'Name', 'Cost', 'Quantity', 'Item Type']
+    df = df[cols].dropna()
+    
+    df['Date'] = pd.to_datetime(df['Date'])
+
+    daily_total = df.groupby('Date')['Cost'].sum()
+
+    daily_avg = daily_total.mean()
+    month_number = datetime.strptime(month, '%B').month
+    number_of_days_in_month = calendar.monthrange(int(year), month_number)[1]
+    projected_monthly_spending = daily_avg * number_of_days_in_month
+
+    category_total = df.groupby('Item Type')['Cost'].sum()
+
+    total_spendings = df['Cost'].sum()
+
+    most_expensive = df.loc[df['Cost'].idxmax()]
+    
+    message += f"📅 *Summary for {calendar.month_name[month_number]} {year}*\n\n"
+    message += f"💰 Total spendings: *{total_spendings:.2f}*\n"
+    message += f"📈 Average daily spending: *{daily_avg:.2f}*\n"
+    message += f"🧮 Projected monthly spending: *{projected_monthly_spending:.2f}*\n\n"
+
+    message += "📊 *Spending by Category:*\n"
+    for category, cost in category_total.items():
+        message += f"  - {category}: *{cost:.2f}*\n"
+
+    message += "\n💸 *Most expensive item:*\n"
+    message += f"  - Name: {most_expensive['Name']}"
+    message += f"  - Cost: *{most_expensive['Cost']:.2f}* "
+    message += f"  - Type: {most_expensive['Item Type']} "
+    message += f"  - Date: {most_expensive['Date'].strftime('%Y-%m-%d')}"
+
+    return message
+
+@bot.message_handler(commands=['summary'])
+def spendings_analysis(message):    
+    # Daily by category
+    # Month's total spendings per category
+    # Current total spendings for the month
+    # Projected total spendings for the month
+    # Most expensive transaction
+    current_year = datetime.today().strftime('%Y')
+    current_month = datetime.today().strftime('%B')
+
+    path_to_excel_sheet = f"transactions{current_year}.xlsx"
+
+    summary = ""
+    
+    try:
+        loaded_excel = load_workbook(path_to_excel_sheet)  
+        current_sheet = loaded_excel[f'{current_month}']  
+
+        summary = get_summary(pd.read_excel(path_to_excel_sheet, sheet_name=current_month), current_year, current_month)
+
+    except FileNotFoundError as e:
+        summary = "File not found"
+    except Exception as e2:
+        summary = f"Error: {str(e2)}"
+
+    bot.reply_to(message, summary)    
 
 def create_new_excel_file(year):
     wb = Workbook()
@@ -141,7 +206,7 @@ def get_months_transactions(message):
                 if (date == f"{row['Date']}") :
                     response.append(
                         f"▫️ "
-                        f"{row['Name'][:15].ljust(15)} "
+                        f"{row['Name'][:25].ljust(25)} "
                         f"${row['Cost']} "
                         f"(x{row['Quantity']}) "
                         f"{row['Item Type']}"
@@ -183,10 +248,10 @@ def get_all_transactions(message):
         else:
             isEmpty = False
 
-
+        # Convert the Date column to a datetime and then format it as dd-mm-yyyy
         df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%d-%m-%Y')
-        # Convert cost to 2dp
-        df['Cost'] = df['Cost'].astype(float).round(2)  
+        # Convert cost to 2dp for consistent output
+        df['Cost'] = df['Cost'].astype(float).round(2)  # Keep as float but rounded
         response.append(f"**{month}**")
         # Build mobile-friendly message
         try :
@@ -210,21 +275,6 @@ def get_all_transactions(message):
     else :
         # already set to markdown mode, not sure why tele is not bolding my months
         bot.reply_to(message, "\n".join(response), parse_mode= "Markdown")
-
-@bot.message_handler(commands=['excel'])
-def send_excel_file(message):
-    current_year = datetime.today().strftime('%Y')
-    path_to_excel_sheet = f"transactions{current_year}.xlsx"
-
-    try:
-        # Send the Excel file to the user
-        with open(path_to_excel_sheet, 'rb') as file:
-            bot.send_document(message.chat.id, file)
-    except FileNotFoundError:
-        bot.reply_to(message, "Excel not created yet. /start to start adding and creating your own sheet!")
-    except Exception as e:
-        bot.reply_to(message, f"An error occurred: {str(e)}")
-
 
 @bot.message_handler(commands=["start", "help"])
 def send_welcome(message): 
@@ -334,6 +384,19 @@ def backdate_transaction(message):
         logger.error(f"Error: {str(e)}")
         bot.reply_to(message, f"Error: {str(e)}")
     
+@bot.message_handler(commands=['excel'])
+def send_excel_file(message):
+    current_year = datetime.today().strftime('%Y')
+    path_to_excel_sheet = f"transactions{current_year}.xlsx"
+
+    try:
+        # Send the Excel file to the user
+        with open(path_to_excel_sheet, 'rb') as file:
+            bot.send_document(message.chat.id, file)
+    except FileNotFoundError:
+        bot.reply_to(message, "Excel not created yet. /start to start adding and creating your own sheet!")
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred: {str(e)}")
 
 @bot.message_handler(commands=["food", "drink", "item", "grocery"])
 def record_transaction(message):
@@ -350,10 +413,9 @@ def record_transaction(message):
             cost = float(match.group(1))  # Convert cost to float
             name = match.group(2)  # Extract name string
             # print(name)
+            quantity = 1
             if match.group(3):
-                quantity = int(match.group(3))  # Convert quantity to int
-            else: 
-                quantity = 1
+                quantity = int(match.group(3))  # Convert quantity to int\
             logger.info("parsed successfully")
             # bot.reply_to(message, "successfully parsed")
             logger.info({"cost": cost, "name": name, "quantity": quantity})
@@ -373,13 +435,21 @@ def record_transaction(message):
 
 logger.info("bot is now running")
 
-if __name__ == "__main__":
-    try:
-        bot.polling(none_stop=True, interval=2, timeout=20)
-    except Exception as e:
-        print(f"Error: {e}")
-        time.sleep(15)
+# if __name__ == "__main__":
+#    try:
+#        bot.polling(none_stop=True, interval=2, timeout=20)
+#    except Exception as e:
+#        print(f"Error: {e}")
+#        time.sleep(15)
 
+if __name__=='__main__':
+    while True:
+        try:
+            bot.polling(non_stop=True, interval=0)
+        except Exception as e:
+            print(e)
+            time.sleep(5)
+            continue
 
 
 
