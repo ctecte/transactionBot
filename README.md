@@ -2,6 +2,7 @@
 A very simple telegram bot that utilises the telegram API and Python pandas to record transactions into an excel sheet. 
 
 Has simple functions like /month to list all spendings in the current month
+
 /summary to project current month's spendings based on start to current day spendings. Items split by category
 
 
